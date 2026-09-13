@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A2F38">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>TV Remote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --room: #262B33;
+    --body: #FAFAF9;
+    --body-shade: #E3E3E0;
+    --key: #FFFFFF;
+    --key-hi: #FFFFFF;
+    --key-press: #EDEDEA;
+    --field: #F2F2F0;
+    --ink: #2B2D31;
+    --ink-soft: #85878C;
+    --blue: #2F66D0;
+    --red: #D4453A;
+    --ok: #3FAE68;
+    --amber: #DE9F2E;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--room);
+    font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: max(16px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- Remote body ---------- */
+  .remote {
+    width: min(336px, 100%);
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--body) 35%, #EFEFEC 100%);
+    border-radius: 52px 52px 42px 42px;
+    padding: 22px 22px 30px;
+    box-shadow:
+      inset 0 1px 0 #fff,
+      inset 0 -3px 0 var(--body-shade),
+      0 34px 60px -22px rgba(0,0,0,.6),
+      0 8px 18px rgba(0,0,0,.25);
+    display: grid;
+    gap: 18px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+  /* ---------- Keys ---------- */
+  .key {
+    appearance: none;
+    border: 0;
+    font: inherit;
+    color: var(--ink);
+    background: var(--key);
+    border-radius: 999px;
+    height: 50px;
+    min-width: 50px;
+    padding: 0 14px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    box-shadow:
+      inset 0 1px 0 var(--key-hi),
+      0 0 0 1px rgba(30,32,36,.06),
+      0 2px 4px rgba(30,32,36,.14);
+    transition: transform 70ms ease-out, box-shadow 70ms ease-out, background-color 70ms ease-out;
+  }
+  .key:active, .key.is-down {
+    transform: translateY(1px);
+    background: var(--key-press);
+    box-shadow: 0 0 0 1px rgba(30,32,36,.08), inset 0 2px 3px rgba(30,32,36,.12);
+  }
+  .key:focus-visible, .status:focus-visible, .link:focus-visible, .btn:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+  }
+  .key svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .key svg.fill { fill: currentColor; stroke: none; width: 18px; height: 18px; }
+  .key.power { color: var(--red); }
+  .key.text { font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+
+  /* ---------- Status pill ---------- */
+  .status {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 13px/1 inherit; font-family: inherit;
+    color: var(--ink-soft);
+    padding: 10px 12px; border-radius: 999px;
+    touch-action: manipulation;
+  }
+  .status:hover { color: var(--ink); }
+  .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #A9A59C;
+    box-shadow: 0 0 0 3px rgba(0,0,0,.05);
+    flex: none;
+  }
+  [data-status="connected"] .led { background: var(--ok); box-shadow: 0 0 0 3px rgba(63,174,104,.18), 0 0 8px rgba(63,174,104,.7); }
+  [data-status="connecting"] .led,
+  [data-status="waiting"] .led { background: var(--amber); animation: pulse 1.1s ease-in-out infinite; }
+  [data-status="error"] .led { background: var(--red); }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  /* ---------- D-pad ---------- */
+  .ring {
+    position: relative;
+    width: 224px; height: 224px;
+    margin: 6px auto;
+    border-radius: 50%;
+    background: var(--key);
+    box-shadow:
+      inset 0 1px 0 var(--key-hi),
+      0 2px 4px rgba(30,32,36,.26),
+      0 0 0 7px var(--body),
+      0 0 0 8px var(--body-shade);
+  }
+  .ring::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    background: conic-gradient(from var(--from, 0deg), rgba(30,32,36,.08) 0 90deg, transparent 90deg);
+    transition: opacity 70ms ease-out;
+  }
+  .ring[data-press]::before { opacity: 1; }
+  .ring[data-press="up"]    { --from: -45deg; }
+  .ring[data-press="right"] { --from: 45deg; }
+  .ring[data-press="down"]  { --from: 135deg; }
+  .ring[data-press="left"]  { --from: 225deg; }
+
+  .ring .dir {
+    position: absolute;
+    width: 76px; height: 62px;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 14px;
+  }
+  .ring .dir:active, .ring .dir.is-down { background: transparent; box-shadow: none; transform: none; }
+  .ring .dir.up    { top: 4px; left: 50%; translate: -50% 0; }
+  .ring .dir.down  { bottom: 4px; left: 50%; translate: -50% 0; }
+  .ring .dir.left  { left: 4px; top: 50%; translate: 0 -50%; width: 62px; height: 76px; }
+  .ring .dir.right { right: 4px; top: 50%; translate: 0 -50%; width: 62px; height: 76px; }
+
+  .ring .ok {
+    position: absolute; inset: 0; margin: auto;
+    width: 96px; height: 96px;
+    padding: 0;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #FFFFFF, #F4F4F2);
+    font-weight: 600; font-size: 15px; letter-spacing: .03em;
+    box-shadow:
+      0 0 0 1px rgba(30,32,36,.08),
+      0 3px 8px rgba(30,32,36,.28),
+      inset 0 1px 0 #fff;
+  }
+  .ring .ok:active, .ring .ok.is-down {
+    background: linear-gradient(180deg, #EFEFEC, #E7E7E4);
+    box-shadow: 0 0 0 1px rgba(30,32,36,.08), inset 0 2px 4px rgba(30,32,36,.3);
+  }
+
+  /* ---------- Rockers ---------- */
+  .rockers { display: grid; grid-template-columns: 62px 1fr 62px; align-items: center; padding: 0 6px; }
+  .rocker {
+    display: flex; flex-direction: column; align-items: stretch;
+    height: 144px;
+    border-radius: 31px;
+    background: var(--key);
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(30,32,36,.06), 0 2px 4px rgba(30,32,36,.14);
+  }
+  .rocker .key {
+    flex: 1; height: auto; min-width: 0; padding: 0;
+    border-radius: 0; background: transparent; box-shadow: none;
+  }
+  .rocker .key:active, .rocker .key.is-down { background: var(--key-press); transform: none; box-shadow: inset 0 2px 3px rgba(30,32,36,.2); }
+  .rocker .key:focus-visible { outline-offset: -3px; }
+  .rocker-label { text-align: center; font-size: 12px; font-weight: 500; color: var(--ink-soft); padding: 2px 0; }
+  .rockers .mid { display: grid; justify-items: center; }
+
+  /* ---------- Playback / colors / apps ---------- */
+  .playback .key { flex: 1; min-width: 0; padding: 0; height: 44px; }
+  .colors { padding: 0 8px; }
+  .colors .key { flex: 1; height: 26px; min-width: 0; padding: 0; }
+  .colors .key span { display: block; width: 100%; height: 100%; border-radius: inherit; }
+  .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .apps .key {
+    height: auto; aspect-ratio: 1; padding: 0; min-width: 0;
+    border-radius: 18px; overflow: hidden;
+    font-size: 12px; font-weight: 600; line-height: 1.15;
+  }
+  .apps .ico { display: grid; place-items: center; width: 100%; height: 100%; padding: 6px; text-align: center; }
+  .apps .has-icon .ico { padding: 0; }
+  .apps .ico img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .apps .key:active img, .apps .key.is-down img { filter: brightness(.9); }
+
+  /* ---------- Dialogs ---------- */
+  dialog {
+    border: 0;
+    border-radius: 30px;
+    padding: 24px;
+    width: min(340px, calc(100% - 24px));
+    background: var(--body);
+    color: var(--ink);
+    box-shadow: 0 30px 60px rgba(0,0,0,.45);
+  }
+  dialog::backdrop { background: rgba(18,21,27,.6); }
+  dialog h2 { margin: 0 0 6px; font-size: 21px; font-weight: 600; line-height: 1.2; }
+  dialog p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
+  .field { display: grid; gap: 6px; margin-top: 18px; }
+  .field > span { font-size: 14px; font-weight: 500; }
+  .field input[type="text"] {
+    font: inherit; font-size: 17px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--body-shade);
+    background: var(--field);
+    color: var(--ink);
+  }
+  .field input[type="text"]:focus { outline: 2px solid var(--blue); outline-offset: 1px; border-color: transparent; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; font-size: 14px; }
+  .check input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--blue); flex: none; }
+  .check small { display: block; color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+  .msg {
+    margin-top: 16px; padding: 12px 14px; border-radius: 14px;
+    background: var(--field); font-size: 14px; line-height: 1.45; color: var(--ink);
+  }
+  .msg:empty { display: none; }
+  .msg[data-tone="error"] { background: #F6E3E0; color: #7A2A22; }
+  .msg[data-tone="ok"] { background: #E2F1E7; color: #20603A; }
+  .pairing { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 14px; }
+  .pairing[hidden] { display: none; }
+  .link { appearance: none; border: 0; background: none; padding: 0; font: inherit; font-size: 14px; color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn {
+    flex: 1;
+    display: inline-flex; justify-content: center; align-items: center;
+    height: 46px; border-radius: 999px; border: 0;
+    font: inherit; font-size: 15px; font-weight: 600;
+    cursor: pointer; text-decoration: none;
+    background: var(--key); color: var(--ink);
+    box-shadow: inset 0 1px 0 var(--key-hi), 0 2px 3px rgba(30,32,36,.2);
+  }
+  .btn.primary { background: var(--blue); color: #fff; box-shadow: 0 2px 6px rgba(47,102,208,.35); }
+  .btn[hidden] { display: none; }
+  .foot { margin-top: 16px !important; font-size: 13px !important; }
+
+  .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+  .numpad .key { height: 56px; font-size: 20px; font-weight: 500; }
+  .numpad .key.small { font-size: 13px; font-weight: 600; }
+
+  .logbox { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+  .logbox summary { cursor: pointer; }
+  .logbox pre {
+    margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--field); color: var(--ink);
+    font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all;
+    max-height: 180px; overflow: auto; user-select: text; -webkit-user-select: text;
+  }
+
+  /* ---------- Home menu ---------- */
+  .tvhome { width: 100%; margin-top: 16px; }
+  .sheet-favs { margin-top: 12px; }
+  .key.missing { opacity: .45; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: 22px; }
+  .sheet-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  #appsText { font-size: 13px; margin-top: 6px; }
+  #appsText:empty { display: none; }
+  .applist { margin-top: 10px; max-height: 40vh; overflow: auto; padding: 2px; }
+  .result.app-row { grid-template-columns: 36px 1fr; align-items: center; gap: 12px; padding: 8px 12px; }
+  .app-row .ico {
+    width: 36px; height: 36px; border-radius: 9px; overflow: hidden;
+    display: grid; place-items: center; background: var(--field);
+    font-size: 14px; font-weight: 600; color: var(--ink-soft);
+  }
+  .app-row .ico img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  /* ---------- Find my TV ---------- */
+  .finder { margin-top: 12px; }
+  #finderPanel { margin-top: 10px; padding: 14px; border-radius: 18px; background: var(--field); display: grid; gap: 12px; }
+  #finderPanel[hidden] { display: none; }
+  #finderPanel .field { margin-top: 0; }
+  #finderPanel input[type="text"] { background: #fff; }
+  .prefix { display: flex; align-items: center; gap: 8px; }
+  .prefix input { flex: 1; min-width: 0; }
+  .prefix span { font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+  .scanbar { height: 4px; border-radius: 2px; background: var(--body-shade); overflow: hidden; }
+  #scanFill { height: 100%; width: 0; background: var(--blue); transition: width 120ms linear; }
+  #scanText { font-size: 13px; }
+  #scanText:empty { display: none; }
+  .results { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .results:empty { display: none; }
+  .result {
+    appearance: none; border: 0; cursor: pointer; font: inherit; color: var(--ink);
+    width: 100%; text-align: left; display: grid; gap: 2px;
+    padding: 12px 14px; border-radius: 14px; background: var(--body);
+    box-shadow: inset 0 1px 0 var(--key-hi), 0 1px 2px rgba(30,32,36,.22);
+  }
+  .result strong { font-size: 15px; font-weight: 600; }
+  .result small { font-size: 13px; color: var(--ink-soft); }
+  .result:active { background: var(--key-press); }
+  .result:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<main class="remote" id="remote" data-status="idle" aria-label="TV remote">
+
+  <div class="row">
+    <button class="key power" data-key="KEY_POWER" aria-label="Power">
+      <svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+    </button>
+    <button class="status" id="statusBtn" aria-label="Connection settings">
+      <span class="led"></span><span id="statusText">Set up</span>
+    </button>
+    <button class="key" data-key="KEY_SOURCE" aria-label="Source">
+      <svg viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9"/><path d="M3 11h10m-3-3 3 3-3 3"/></svg>
+    </button>
+  </div>
+
+  <div class="row">
+    <button class="key text" id="numpadBtn" aria-label="Number pad">123</button>
+    <button class="key" id="homeBtn" aria-label="Home and apps" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V19h12V9.5"/></svg>
+    </button>
+    <button class="key" data-key="KEY_MENU" aria-label="TV settings menu">
+      <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+  </div>
+
+  <div class="ring" id="ring">
+    <button class="key dir up" data-key="KEY_UP" data-dir="up" data-repeat aria-label="Up">
+      <svg viewBox="0 0 24 24"><path d="m7 14 5-5 5 5"/></svg>
+    </button>
+    <button class="key dir left" data-key="KEY_LEFT" data-dir="left" data-repeat aria-label="Left">
+      <svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg>
+    </button>
+    <button class="key ok" data-key="KEY_ENTER" aria-label="OK">OK</button>
+    <button class="key dir right" data-key="KEY_RIGHT" data-dir="right" data-repeat aria-label="Right">
+      <svg viewBox="0 0 24 24"><path d="m10 7 5 5-5 5"/></svg>
+    </button>
+    <button class="key dir down" data-key="KEY_DOWN" data-dir="down" data-repeat aria-label="Down">
+      <svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+    </button>
+  </div>
+
+  <div class="row">
+    <button class="key" data-key="KEY_RETURN" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M9 5 4 10l5 5"/><path d="M4 10h10a5 5 0 0 1 0 10h-3"/></svg>
+    </button>
+    <button class="key" data-key="KEY_GUIDE" aria-label="Guide">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M9 10v9"/></svg>
+    </button>
+    <button class="key" data-key="KEY_EXIT" aria-label="Exit">
+      <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg>
+    </button>
+  </div>
+
+  <div class="rockers">
+    <div class="rocker" role="group" aria-label="Volume">
+      <button class="key" data-key="KEY_VOLUP" data-repeat aria-label="Volume up">
+        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>
+      </button>
+      <span class="rocker-label" aria-hidden="true">Vol</span>
+      <button class="key" data-key="KEY_VOLDOWN" data-repeat aria-label="Volume down">
+        <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>
+      </button>
+    </div>
+    <div class="mid">
+      <button class="key" data-key="KEY_MUTE" aria-label="Mute">
+        <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="m16.5 9.5 5 5m0-5-5 5"/></svg>
+      </button>
+    </div>
+    <div class="rocker" role="group" aria-label="Channel">
+      <button class="key" data-key="KEY_CHUP" data-repeat aria-label="Channel up">
+        <svg viewBox="0 0 24 24"><path d="m7 14 5-5 5 5"/></svg>
+      </button>
+      <span class="rocker-label" aria-hidden="true">Ch</span>
+      <button class="key" data-key="KEY_CHDOWN" data-repeat aria-label="Channel down">
+        <svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="row playback">
+    <button class="key" data-key="KEY_REWIND" aria-label="Rewind">
+      <svg class="fill" viewBox="0 0 24 24"><path d="M11 6.5 4 12l7 5.5zM20 6.5 13 12l7 5.5z"/></svg>
+    </button>
+    <button class="key" data-key="KEY_PLAY" aria-label="Play">
+      <svg class="fill" viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>
+    </button>
+    <button class="key" data-key="KEY_PAUSE" aria-label="Pause">
+      <svg class="fill" viewBox="0 0 24 24"><path d="M6.5 5h3.5v14H6.5zM14 5h3.5v14H14z"/></svg>
+    </button>
+    <button class="key" data-key="KEY_FF" aria-label="Fast forward">
+      <svg class="fill" viewBox="0 0 24 24"><path d="M4 6.5 11 12l-7 5.5zM13 6.5 20 12l-7 5.5z"/></svg>
+    </button>
+  </div>
+
+  <div class="row colors">
+    <button class="key" data-key="KEY_RED" aria-label="Red"><span style="background:#C94A3F"></span></button>
+    <button class="key" data-key="KEY_GREEN" aria-label="Green"><span style="background:#4E9E5C"></span></button>
+    <button class="key" data-key="KEY_YELLOW" aria-label="Yellow"><span style="background:#DDB43C"></span></button>
+    <button class="key" data-key="KEY_CYAN" aria-label="Blue"><span style="background:#3E6CC4"></span></button>
+  </div>
+
+  <div class="apps" id="apps"></div>
+</main>
+
+<!-- Connection settings -->
+<dialog id="settings" aria-labelledby="settingsTitle">
+  <h2 id="settingsTitle">Connect to your TV</h2>
+  <p>Your phone or computer needs to be on the same Wi‑Fi network as the TV, and the TV needs to be on.</p>
+
+  <label class="field">
+    <span>TV IP address</span>
+    <input type="text" id="ipInput" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="192.168.1.20">
+  </label>
+  <p style="margin-top:6px;font-size:13px">On the TV, open Settings and look under Network for Network status or IP settings.</p>
+
+  <div class="finder">
+    <button class="link" id="findToggle" aria-expanded="false" aria-controls="finderPanel">Find my TV on this network</button>
+    <div id="finderPanel" hidden>
+      <label class="field">
+        <span>Network to scan</span>
+        <div class="prefix">
+          <input type="text" id="subnetInput" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1">
+          <span>.1 to .254</span>
+        </div>
+      </label>
+      <div class="scanbar" id="scanBar" hidden><div id="scanFill"></div></div>
+      <p id="scanText" aria-live="polite"></p>
+      <ul class="results" id="results"></ul>
+      <button class="btn" id="scanBtn">Scan</button>
+    </div>
+  </div>
+
+  <label class="check">
+    <input type="checkbox" id="secureInput" checked>
+    <span>Secure connection<small>Keep this on for TVs from 2018 onward. Turn it off for older models.</small></span>
+  </label>
+
+  <div class="pairing" id="pairingRow" hidden>
+    <span>Paired with this TV</span>
+    <button class="link" id="forgetBtn">Forget pairing</button>
+  </div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+
+  <details class="logbox">
+    <summary>Connection log</summary>
+    <pre id="log">Nothing yet.</pre>
+  </details>
+
+  <div class="actions">
+    <a class="btn" id="trustLink" target="_blank" rel="noopener" hidden>Trust TV</a>
+    <button class="btn primary" id="connectBtn">Connect</button>
+  </div>
+  <div class="actions" style="margin-top:10px">
+    <button class="btn" id="closeSettings">Close</button>
+  </div>
+
+  <p class="foot">Once it connects, bookmark this page. The TV address and pairing are stored in the link, so the bookmark reconnects by itself.</p>
+</dialog>
+
+<!-- Home menu -->
+<dialog id="homeSheet" aria-labelledby="homeTitle">
+  <h2 id="homeTitle">Apps</h2>
+  <button class="btn tvhome" data-key="KEY_HOME">Show TV home screen</button>
+  <div class="apps sheet-favs" id="favApps"></div>
+  <div class="sheet-head">
+    <h3>All apps on this TV</h3>
+    <button class="link" id="refreshApps">Refresh</button>
+  </div>
+  <p id="appsText" aria-live="polite"></p>
+  <ul class="results applist" id="allApps"></ul>
+  <div class="actions">
+    <button class="btn" id="closeHome">Done</button>
+  </div>
+</dialog>
+
+<!-- Number pad -->
+<dialog id="numpad" aria-label="Number pad">
+  <div class="numpad" style="margin-top:0">
+    <button class="key" data-key="KEY_1">1</button>
+    <button class="key" data-key="KEY_2">2</button>
+    <button class="key" data-key="KEY_3">3</button>
+    <button class="key" data-key="KEY_4">4</button>
+    <button class="key" data-key="KEY_5">5</button>
+    <button class="key" data-key="KEY_6">6</button>
+    <button class="key" data-key="KEY_7">7</button>
+    <button class="key" data-key="KEY_8">8</button>
+    <button class="key" data-key="KEY_9">9</button>
+    <button class="key small" data-key="KEY_CH_LIST">Ch list</button>
+    <button class="key" data-key="KEY_0">0</button>
+    <button class="key small" data-key="KEY_PRECH">Prev ch</button>
+  </div>
+  <div class="actions">
+    <button class="btn" id="closeNumpad">Done</button>
+  </div>
+</dialog>
+
+<script>
+/* ============================================================
+   Config — favourite apps. Each one is matched by name against the
+   list of apps the TV reports, so the right ID is used automatically.
+   "fallback" is used before the list loads (IDs for 2016–2018 TVs).
+   ============================================================ */
+const FAVORITES = [
+  { name: "Netflix",     match: /netflix/i,            fallback: { id: "11101200001",   type: 2 } },
+  { name: "HBO Max",     match: /hbo/i },
+  { name: "Viu",         match: /^viu\b/i },
+  { name: "Prime Video", match: /prime video|amazon/i, fallback: { id: "3201512006785", type: 2 } },
+];
+const REMOTE_NAME = "Web Remote"; // name shown on the TV's Allow prompt
+const DEFAULT_TV_IP = "192.168.1.100"; // used when the link doesn't include an ip
+
+/* ============================================================
+   State (persisted in the URL hash — bookmark to keep it)
+   ============================================================ */
+const state = { ip: "", secure: true, token: "", ws: null, status: "idle", everConnected: false };
+
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  state.ip = p.get("ip") || DEFAULT_TV_IP;
+  state.secure = p.get("secure") !== "0";
+  state.token = p.get("token") || "";
+}
+function writeHash() {
+  const p = new URLSearchParams();
+  if (state.ip) p.set("ip", state.ip);
+  p.set("secure", state.secure ? "1" : "0");
+  if (state.token) p.set("token", state.token);
+  try { history.replaceState(null, "", "#" + p.toString()); } catch (_) { /* sandboxed preview */ }
+}
+
+/* ============================================================
+   UI refs
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const remote = $("remote"), ring = $("ring");
+const settings = $("settings"), numpad = $("numpad"), homeSheet = $("homeSheet");
+const ipInput = $("ipInput"), secureInput = $("secureInput");
+const msg = $("msg"), statusText = $("statusText");
+const trustLink = $("trustLink"), pairingRow = $("pairingRow");
+
+const STATUS_LABEL = {
+  idle: "Set up", connecting: "Connecting…", waiting: "Allow on TV",
+  connected: "Connected", error: "Can't connect",
+};
+
+function setStatus(status, message, tone) {
+  state.status = status;
+  remote.dataset.status = status;
+  statusText.textContent = status === "idle" && state.ip ? "Tap to connect" : STATUS_LABEL[status];
+
+  if (message === undefined) {
+    message = {
+      idle: state.ip ? "" : "Enter your TV's IP address to get started.",
+      connecting: `Connecting to ${state.ip}…`,
+      waiting: "Look at your TV. If it asks whether to allow this device, select Allow.",
+      connected: `Connected to ${state.ip}.`,
+      error: "",
+    }[status];
+  }
+  msg.textContent = message || "";
+  msg.dataset.tone = tone || (status === "error" ? "error" : status === "connected" ? "ok" : "");
+  renderSettingsExtras();
+}
+
+function renderSettingsExtras() {
+  const ip = ipInput.value.trim() || state.ip;
+  const showTrust = secureInput.checked && !!ip;
+  trustLink.hidden = !showTrust;
+  if (showTrust) trustLink.href = `https://${ip}:8002/api/v2/`;
+  pairingRow.hidden = !state.token;
+}
+
+/* ============================================================
+   Connection
+   ============================================================ */
+function socketUrl(secure) {
+  const name = encodeURIComponent(btoa(REMOTE_NAME));
+  const base = secure ? `wss://${state.ip}:8002` : `ws://${state.ip}:8001`;
+  let url = `${base}/api/v2/channels/samsung.remote.control?name=${name}`;
+  if (secure && state.token) url += `&token=${encodeURIComponent(state.token)}`;
+  return url;
+}
+
+const connLog = [];
+function log(line) {
+  const t = new Date().toLocaleTimeString([], { hour12: false });
+  connLog.push(`${t}  ${line}`);
+  if (connLog.length > 40) connLog.shift();
+  $("log").textContent = connLog.join("\n");
+}
+
+let connectTimer = null;
+
+function disconnect() {
+  clearTimeout(connectTimer);
+  const ws = state.ws;
+  state.ws = null;
+  if (ws) { try { ws.close(); } catch (_) {} }
+}
+
+function connect(opts = {}) {
+  if (!state.ip) { openSettings(); return; }
+  const secure = opts.secure !== undefined ? opts.secure : state.secure;
+  disconnect();
+
+  if (location.protocol === "https:" && !secure) {
+    setStatus("error", "This page is loaded over HTTPS, so the browser blocks the unsecured connection on port 8001. Open this file directly from your device or a local server instead.");
+    return;
+  }
+
+  setStatus("connecting", `Connecting to ${state.ip} on port ${secure ? "8002 (secure)" : "8001"}…`);
+  const url = socketUrl(secure);
+  log(`Opening ${url.replace(/token=[^&]+/, "token=(saved)")}`);
+
+  let opened = false;
+  let ws;
+  try {
+    ws = new WebSocket(url);
+  } catch (e) {
+    log(`Browser refused: ${e.message}`);
+    setStatus("error", `The browser refused to open a connection: ${e.message}`);
+    return;
+  }
+  state.ws = ws;
+
+  // Secure failed or hung: try the plain port once before giving up.
+  const tryFallback = (reason) => {
+    if (opts.isFallback || !secure || location.protocol === "https:") return false;
+    log(`${reason} Trying port 8001 instead.`);
+    connect({ secure: false, isFallback: true });
+    return true;
+  };
+  const failMessage = () => opts.isFallback
+    ? "Neither the secure connection (port 8002) nor the regular one (port 8001) worked. Open Connection log below and send me what it says."
+    : secure
+      ? `Couldn't connect securely to ${state.ip}. Select Trust TV, accept the browser warning, then connect again.`
+      : `Couldn't reach ${state.ip} on port 8001. Check the TV is on and on the same Wi‑Fi.`;
+
+  connectTimer = setTimeout(() => {
+    if (state.ws !== ws || opened) return;
+    log("No response after 8 seconds.");
+    state.ws = null;
+    try { ws.close(); } catch (_) {}
+    if (!tryFallback("Port " + (secure ? "8002" : "8001") + " timed out.")) setStatus("error", failMessage());
+  }, 8000);
+
+  ws.onopen = () => {
+    opened = true;
+    clearTimeout(connectTimer);
+    log("Connection open. Waiting for the TV to accept this remote…");
+    if (state.ws !== ws) return;
+    setStatus("waiting");
+    connectTimer = setTimeout(() => {
+      if (state.ws !== ws || state.status !== "waiting") return;
+      log("The TV didn't confirm within 40 seconds.");
+      setStatus("error", "The TV didn't confirm the connection. Check the TV for an Allow prompt, then select Connect again.");
+      disconnect();
+    }, 40000);
+  };
+
+  ws.onmessage = (ev) => {
+    let data;
+    try { data = JSON.parse(ev.data); } catch (_) { log("TV sent a message that isn't JSON."); return; }
+    log(`TV sent: ${data.event || "(no event name)"}`);
+    switch (data.event) {
+      case "ms.channel.connect":
+        clearTimeout(connectTimer);
+        if (data.data && data.data.token) { state.token = data.data.token; log("Pairing token saved."); }
+        if (secure !== state.secure) {
+          state.secure = secure;
+          secureInput.checked = secure;
+          log(`This TV works on port ${secure ? "8002" : "8001"}; saved that for next time.`);
+        }
+        writeHash();
+        state.everConnected = true;
+        setStatus("connected");
+        requestApps();
+        if (settings.open) setTimeout(() => settings.open && state.status === "connected" && settings.close(), 900);
+        break;
+      case "ed.installedApp.get":
+        receiveApps(data);
+        break;
+      case "ed.apps.icon":
+        receiveIcon(data);
+        break;
+      case "ms.channel.unauthorized":
+        clearTimeout(connectTimer);
+        setStatus("error", "The TV blocked this remote. On the TV, go to Settings › General › External Device Manager › Device Connection Manager, remove or allow “Web Remote”, then connect again.");
+        break;
+      case "ms.channel.timeOut":
+        clearTimeout(connectTimer);
+        setStatus("error", "The Allow prompt on the TV timed out. Select Connect again and choose Allow on the TV.");
+        break;
+    }
+  };
+
+  ws.onerror = () => log("Connection error.");
+
+  ws.onclose = (ev) => {
+    log(`Connection closed (code ${ev.code}${ev.reason ? ", " + ev.reason : ""}).`);
+    if (state.ws !== ws) return; // replaced by a newer socket
+    clearTimeout(connectTimer);
+    state.ws = null;
+    if (!opened) {
+      if (!tryFallback("Port " + (secure ? "8002" : "8001") + " failed.")) setStatus("error", failMessage());
+    } else if (state.status !== "error") {
+      setStatus("idle", "Disconnected from the TV.");
+    }
+  };
+}
+
+function isReady() {
+  return state.ws && state.ws.readyState === WebSocket.OPEN && state.status === "connected";
+}
+
+function send(payload) {
+  if (!isReady()) {
+    if (!state.ip) openSettings();
+    else if (state.status !== "connecting" && state.status !== "waiting") connect();
+    return false;
+  }
+  state.ws.send(JSON.stringify(payload));
+  if (navigator.vibrate) navigator.vibrate(8);
+  return true;
+}
+
+function sendKey(key) {
+  return send({
+    method: "ms.remote.control",
+    params: { Cmd: "Click", DataOfCmd: key, Option: "false", TypeOfRemote: "SendRemoteKey" },
+  });
+}
+
+function launchApp(appId, type) {
+  // app_type 4 = built-in Tizen app (e.g. the browser); everything else opens as a deep link
+  const action_type = String(type) === "4" ? "NATIVE_LAUNCH" : "DEEP_LINK";
+  return send({
+    method: "ms.channel.emit",
+    params: { event: "ed.apps.launch", to: "host", data: { appId, action_type } },
+  });
+}
+
+/* ============================================================
+   Buttons: press, hold-to-repeat, keyboard activation
+   ============================================================ */
+function press(btn) {
+  if (btn.dataset.key) sendKey(btn.dataset.key);
+  else if (btn.dataset.app) launchApp(btn.dataset.app, btn.dataset.type);
+  if (homeSheet.open && homeSheet.contains(btn) && isReady()) setTimeout(() => homeSheet.close(), 150);
+}
+
+let repeatDelay = null, repeatTimer = null;
+function stopRepeat() {
+  clearTimeout(repeatDelay); clearInterval(repeatTimer);
+  repeatDelay = repeatTimer = null;
+  delete ring.dataset.press;
+}
+
+document.addEventListener("pointerdown", (e) => {
+  const btn = e.target.closest("[data-key], [data-app]");
+  if (!btn || e.button > 0) return;
+  stopRepeat();
+  if (btn.dataset.dir) ring.dataset.press = btn.dataset.dir;
+  press(btn);
+  if (btn.hasAttribute("data-repeat")) {
+    repeatDelay = setTimeout(() => { repeatTimer = setInterval(() => press(btn), 130); }, 420);
+  }
+});
+window.addEventListener("pointerup", stopRepeat);
+window.addEventListener("pointercancel", stopRepeat);
+window.addEventListener("blur", stopRepeat);
+
+// Keyboard or assistive-tech activation (click with no pointer)
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-key], [data-app]");
+  if (btn && e.detail === 0) { flash(btn); press(btn); }
+});
+
+function flash(btn) {
+  btn.classList.add("is-down");
+  if (btn.dataset.dir) ring.dataset.press = btn.dataset.dir;
+  setTimeout(() => { btn.classList.remove("is-down"); delete ring.dataset.press; }, 120);
+}
+
+// Physical keyboard shortcuts (desktop)
+const KEYMAP = {
+  ArrowUp: "KEY_UP", ArrowDown: "KEY_DOWN", ArrowLeft: "KEY_LEFT", ArrowRight: "KEY_RIGHT",
+  Enter: "KEY_ENTER", Backspace: "KEY_RETURN",
+  "+": "KEY_VOLUP", "=": "KEY_VOLUP", "-": "KEY_VOLDOWN", m: "KEY_MUTE",
+  PageUp: "KEY_CHUP", PageDown: "KEY_CHDOWN",
+};
+document.addEventListener("keydown", (e) => {
+  if (settings.open || numpad.open) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t.matches("input, textarea")) return;
+  if ((e.key === "Enter" || e.key === " ") && t.matches("button, a")) return; // native click handles it
+  if (e.key === "h") { e.preventDefault(); openHome(); return; }
+  const key = /^[0-9]$/.test(e.key) ? "KEY_" + e.key : KEYMAP[e.key];
+  if (!key) return;
+  e.preventDefault();
+  const btn = remote.querySelector(`[data-key="${key}"]`);
+  if (btn) flash(btn);
+  sendKey(key);
+});
+
+/* ============================================================
+   Settings + number pad dialogs
+   ============================================================ */
+function openSettings() {
+  ipInput.value = state.ip;
+  secureInput.checked = state.secure;
+  if (!msg.textContent) setStatus(state.status);
+  renderSettingsExtras();
+  if (!state.ip) setFinderOpen(true);
+  if (!settings.open) settings.showModal();
+  if (!state.ip) ipInput.focus();
+}
+
+function applyAndConnect() {
+  const ip = ipInput.value.trim().replace(/^[a-z]+:\/\//i, "").replace(/[:/].*$/, "");
+  if (!ip) { setStatus("error", "Enter the TV's IP address first."); ipInput.focus(); return; }
+  if (ip !== state.ip) state.token = ""; // different TV, new pairing
+  state.ip = ip;
+  state.secure = secureInput.checked;
+  writeHash();
+  connect();
+}
+
+$("statusBtn").addEventListener("click", openSettings);
+$("connectBtn").addEventListener("click", applyAndConnect);
+$("closeSettings").addEventListener("click", () => settings.close());
+ipInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); applyAndConnect(); } });
+ipInput.addEventListener("input", renderSettingsExtras);
+secureInput.addEventListener("change", renderSettingsExtras);
+$("forgetBtn").addEventListener("click", () => {
+  state.token = ""; writeHash(); disconnect();
+  setStatus("idle", "Pairing removed. Select Connect to pair again.");
+});
+
+$("numpadBtn").addEventListener("click", () => numpad.showModal());
+$("closeNumpad").addEventListener("click", () => numpad.close());
+[settings, numpad, homeSheet].forEach((d) =>
+  d.addEventListener("click", (e) => { if (e.target === d) d.close(); }) // tap backdrop to close
+);
+
+/* ============================================================
+   Home menu + app shortcuts
+   The TV reports its installed apps (name, ID, type) on request.
+   ============================================================ */
+const appsText = $("appsText"), allApps = $("allApps");
+let appsStatus = "idle"; // idle | loading | loaded | failed
+let appsTimer = null;
+
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function requestApps() {
+  if (!isReady()) return;
+  appsStatus = "loading";
+  renderApps();
+  state.ws.send(JSON.stringify({ method: "ms.channel.emit", params: { event: "ed.installedApp.get", to: "host" } }));
+  clearTimeout(appsTimer);
+  appsTimer = setTimeout(() => {
+    if (appsStatus !== "loading") return;
+    appsStatus = "failed";
+    log("The TV didn't send its app list.");
+    renderApps();
+  }, 6000);
+}
+
+function receiveApps(msg) {
+  clearTimeout(appsTimer);
+  const list = (msg.data && msg.data.data) || [];
+  state.apps = list
+    .map((a) => ({ id: a.appId, name: a.name, type: a.app_type, icon: a.icon }))
+    .filter((a) => a.id && a.name)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  appsStatus = "loaded";
+  const withIcons = state.apps.filter((a) => a.icon).length;
+  log(`The TV reported ${state.apps.length} apps; ${withIcons} include an icon path.`);
+  if (state.apps[0]) log(`Example app: ${JSON.stringify(list[0]).slice(0, 160)}`);
+  renderApps();
+  queueIcons();
+}
+
+function resolveFavorite(f) {
+  const found = state.apps && state.apps.find((a) => f.match.test(a.name));
+  if (found) return found;
+  return f.fallback ? { ...f.fallback, name: f.name } : null;
+}
+
+// Icons are the TV's own app icons, fetched one at a time over the same connection.
+const iconCache = {};
+const iconQueue = [];
+let iconPending = null, iconTimer = null, iconsWork = null; // null = unknown yet
+
+function queueIcons() {
+  if (iconsWork === false) return;
+  const favIds = FAVORITES.map(resolveFavorite).filter(Boolean).map((a) => a.id);
+  const ordered = [...(state.apps || [])].sort((a, b) => favIds.includes(b.id) - favIds.includes(a.id));
+  for (const a of ordered) {
+    if (!a.icon || iconCache[a.id]) continue;
+    if ((iconPending && iconPending.id === a.id) || iconQueue.some((q) => q.id === a.id)) continue;
+    iconQueue.push(a);
+  }
+  pumpIcons();
+}
+
+function pumpIcons() {
+  if (iconPending || !iconQueue.length || !isReady()) return;
+  iconPending = iconQueue.shift();
+  state.ws.send(JSON.stringify({
+    method: "ms.channel.emit",
+    params: { event: "ed.apps.icon", to: "host", data: { iconPath: iconPending.icon } },
+  }));
+  iconTimer = setTimeout(() => {
+    iconPending = null;
+    if (iconsWork === null) { iconsWork = false; iconQueue.length = 0; log("This TV doesn't share app icons; showing names instead."); return; }
+    pumpIcons();
+  }, 3000);
+}
+
+function receiveIcon(msg) {
+  clearTimeout(iconTimer);
+  const d = (msg.data && msg.data.data && typeof msg.data.data === "object") ? msg.data.data : (msg.data || {});
+  const image = d.imageBase64 || d.image || d.iconData || "";
+  const target = (d.iconPath && (state.apps || []).find((a) => a.icon === d.iconPath)) || iconPending;
+  iconPending = null;
+  if (!image) log(`Icon reply had no image (fields: ${Object.keys(d).join(", ") || "none"}).`);
+  if (image && target) {
+    if (iconsWork !== true) log(`Icons are loading (first: ${target.name}).`);
+    iconsWork = true;
+    iconCache[target.id] = image.startsWith("data:") ? image : `data:image/png;base64,${image}`;
+    updateIcon(target.id);
+  }
+  pumpIcons();
+}
+
+function updateIcon(id) {
+  document.querySelectorAll("[data-app]").forEach((b) => {
+    if (b.dataset.app !== id) return;
+    const ico = b.querySelector(".ico");
+    if (!ico) return;
+    ico.innerHTML = `<img src="${iconCache[id]}" alt="">`;
+    b.classList.add("has-icon");
+  });
+}
+
+function icoInner(a, label, initialOnly) {
+  if (iconCache[a.id]) return `<img src="${iconCache[a.id]}" alt="">`;
+  return esc(initialOnly ? label.trim().charAt(0).toUpperCase() : label);
+}
+
+function appTile(a, label) {
+  return `<button class="key${iconCache[a.id] ? " has-icon" : ""}" data-app="${esc(a.id)}" data-type="${esc(a.type)}" aria-label="Open ${esc(label)}"><span class="ico">${icoInner(a, label)}</span></button>`;
+}
+
+function appRow(a) {
+  return `<button class="result app-row${iconCache[a.id] ? " has-icon" : ""}" data-app="${esc(a.id)}" data-type="${esc(a.type)}" aria-label="Open ${esc(a.name)}"><span class="ico">${icoInner(a, a.name, true)}</span><strong>${esc(a.name)}</strong></button>`;
+}
+
+function renderApps() {
+  const favHtml = FAVORITES.map((f) => {
+    const a = resolveFavorite(f);
+    return a
+      ? appTile(a, f.name)
+      : `<button class="key missing" data-missing="${esc(f.name)}" aria-label="${esc(f.name)}, not found on this TV"><span class="ico">${esc(f.name)}</span></button>`;
+  }).join("");
+  $("apps").innerHTML = favHtml;
+  $("favApps").innerHTML = favHtml;
+
+  allApps.innerHTML = (state.apps || []).map((a) => `<li>${appRow(a)}</li>`).join("");
+  appsText.textContent = {
+    idle: isReady() ? "" : "Connect to the TV to see its apps.",
+    loading: "Loading apps from the TV…",
+    loaded: state.apps && state.apps.length ? "" : "The TV didn't report any apps.",
+    failed: "This TV didn't send its app list. Netflix and Prime Video still work.",
+  }[appsStatus];
+}
+
+function openHome() {
+  renderApps();
+  if (!homeSheet.open) homeSheet.showModal();
+  if (isReady() && appsStatus !== "loaded" && appsStatus !== "loading") requestApps();
+}
+
+$("homeBtn").addEventListener("click", openHome);
+$("closeHome").addEventListener("click", () => homeSheet.close());
+$("refreshApps").addEventListener("click", () => {
+  if (isReady()) requestApps();
+  else { appsText.textContent = "Connect to the TV to see its apps."; }
+});
+document.addEventListener("click", (e) => {
+  const m = e.target.closest("[data-missing]");
+  if (!m) return;
+  openHome();
+  appsText.textContent = appsStatus === "loaded"
+    ? `${m.dataset.missing} isn't installed on this TV. Install it from the TV's Apps store, then select Refresh.`
+    : `${m.dataset.missing} will work once the TV's app list has loaded.`;
+});
+
+renderApps();
+
+/* ============================================================
+   Start
+   ============================================================ */
+/* ============================================================
+   Find my TV — probes port 8001 on every address in the subnet.
+   Samsung TVs run their API there, so anything that answers is
+   almost certainly a TV.
+   ============================================================ */
+const findToggle = $("findToggle"), finderPanel = $("finderPanel");
+const subnetInput = $("subnetInput"), scanBtn = $("scanBtn");
+const scanText = $("scanText"), scanFill = $("scanFill"), scanBar = $("scanBar"), results = $("results");
+let scanCtrl = null;
+
+const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+function isPrivate(ip) {
+  const m = IPV4.exec(ip || "");
+  if (!m) return false;
+  const a = +m[1], b = +m[2];
+  return a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
+}
+function guessSubnet() {
+  // If this page is served from a laptop on the LAN, its address tells us the network.
+  const hit = [ipInput.value.trim(), state.ip, location.hostname].find(isPrivate);
+  return hit ? hit.split(".").slice(0, 3).join(".") : "192.168.1";
+}
+function setFinderOpen(open) {
+  finderPanel.hidden = !open;
+  findToggle.setAttribute("aria-expanded", String(open));
+  if (open && !subnetInput.value) subnetInput.value = guessSubnet();
+}
+
+async function probe(ip, parentSignal) {
+  const ctrl = new AbortController();
+  const stop = () => ctrl.abort();
+  const timer = setTimeout(stop, 1200);
+  parentSignal.addEventListener("abort", stop, { once: true });
+  try {
+    // no-cors: we can't read the reply, but the promise resolves only if the host answered.
+    await fetch(`http://${ip}:8001/api/v2/`, { mode: "no-cors", cache: "no-store", signal: ctrl.signal });
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    clearTimeout(timer);
+    parentSignal.removeEventListener("abort", stop);
+  }
+}
+
+async function readDeviceInfo(ip) {
+  // Best effort: only works if the TV allows cross-origin reads. Many models don't.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2500);
+  try {
+    const res = await fetch(`http://${ip}:8001/api/v2/`, { cache: "no-store", signal: ctrl.signal });
+    const data = await res.json();
+    const d = data.device || {};
+    return {
+      name: String(data.name || d.name || "").replace(/^\[TV\]\s*/, ""),
+      model: d.modelName || "",
+      secure: d.TokenAuthSupport === undefined ? undefined : String(d.TokenAuthSupport) === "true",
+    };
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function addResult(ip) {
+  const li = document.createElement("li");
+  li.innerHTML = `<button class="result" data-ip="${ip}"><strong>Samsung TV</strong><small>${ip}</small></button>`;
+  results.appendChild(li);
+  readDeviceInfo(ip).then((info) => {
+    if (!info) return;
+    const btn = li.firstElementChild;
+    if (info.name) btn.querySelector("strong").textContent = info.name;
+    if (info.model) btn.querySelector("small").textContent = `${ip}, model ${info.model}`;
+    if (info.secure !== undefined) btn.dataset.secure = info.secure ? "1" : "0";
+  });
+}
+
+async function scan() {
+  if (scanCtrl) { scanCtrl.abort(); return; } // button doubles as Stop
+
+  const prefix = subnetInput.value.trim().replace(/\.+$/, "");
+  if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(prefix)) {
+    scanText.textContent = "Enter the first three parts of an address, like 192.168.1";
+    subnetInput.focus();
+    return;
+  }
+  if (location.protocol === "https:") {
+    scanText.textContent = "Scanning only works when this page is opened as a local file or from an http:// address. On https://, enter the TV's IP address yourself.";
+    return;
+  }
+
+  const ctrl = (scanCtrl = new AbortController());
+  const total = 254;
+  let next = 1, done = 0, found = 0;
+  results.innerHTML = "";
+  scanBar.hidden = false;
+  scanFill.style.width = "0%";
+  scanBtn.textContent = "Stop scan";
+  scanText.textContent = `Checking ${prefix}.1 to ${prefix}.254…`;
+
+  const worker = async () => {
+    while (next <= total && !ctrl.signal.aborted) {
+      const ip = `${prefix}.${next++}`;
+      if ((await probe(ip, ctrl.signal)) && !ctrl.signal.aborted) { found++; addResult(ip); }
+      done++;
+      scanFill.style.width = `${(done / total) * 100}%`;
+    }
+  };
+  await Promise.all(Array.from({ length: 32 }, worker));
+
+  const stopped = ctrl.signal.aborted;
+  scanCtrl = null;
+  scanBar.hidden = true;
+  scanBtn.textContent = "Scan again";
+  if (found) {
+    scanText.textContent = stopped
+      ? `Scan stopped. Found ${found} so far. Select your TV to connect.`
+      : `Found ${found} ${found === 1 ? "TV" : "TVs"}. Select yours to connect.`;
+  } else {
+    scanText.textContent = stopped
+      ? "Scan stopped."
+      : `No TVs answered on ${prefix}.x. Make sure the TV is on and on the same Wi‑Fi. If your router uses a different range, try 192.168.0 or 10.0.0.`;
+  }
+}
+
+findToggle.addEventListener("click", () => setFinderOpen(finderPanel.hidden));
+scanBtn.addEventListener("click", scan);
+subnetInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); scan(); } });
+results.addEventListener("click", (e) => {
+  const btn = e.target.closest(".result");
+  if (!btn) return;
+  if (scanCtrl) scanCtrl.abort();
+  ipInput.value = btn.dataset.ip;
+  if (btn.dataset.secure) secureInput.checked = btn.dataset.secure === "1";
+  setFinderOpen(false);
+  applyAndConnect();
+});
+
+readHash();
+setStatus("idle");
+if (state.ip) connect();
+
+// Phones drop sockets when the screen locks; reconnect when you come back.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.ip && state.everConnected &&
+      !isReady() && state.status !== "connecting" && state.status !== "waiting") {
+    connect();
+  }
+});
+</script>
+</body>
+</html>
